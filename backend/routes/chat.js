@@ -1,10 +1,16 @@
-const express = require('express');
-const router = express.Router();
-const fs = require('fs');
-const path = require('path');
+import express from 'express';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-const llmService = require('../services/llmService');
-const { textToSpeechBuffer } = require('../services/ttsService');
+// Get __dirname equivalent for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+import llmService from '../services/llmService.js';
+import { textToSpeechBuffer } from '../services/ttsService.js';
+
+const router = express.Router();
 
 router.post('/', async (req, res) => {
   const { text } = req.body;
@@ -30,4 +36,4 @@ router.post('/', async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;
