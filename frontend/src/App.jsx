@@ -292,12 +292,13 @@ function App() {
       justifyContent: 'stretch',
       color: '#fff',
       textAlign: 'center',
+      padding: '0 8px', // Mobile padding
     }}>
       {/* Header */}
       <div style={{
         backgroundColor: 'transparent',
         borderBottom: 'none',
-        padding: '32px 0 0 0',
+        padding: '12px 0 0 0',
         textAlign: 'center',
         boxShadow: 'none',
         width: '100%',
@@ -306,8 +307,8 @@ function App() {
         <h1 style={{ 
           color: '#fff', 
           margin: 0,
-          fontSize: '2.5rem',
-          fontWeight: '700',
+          fontSize: '1.5rem',
+          fontWeight: '600',
           letterSpacing: '-0.025em',
           textShadow: '0 2px 8px #0a75c2'
         }}>
@@ -322,25 +323,27 @@ function App() {
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        maxWidth: '600px',
         width: '100%',
+        maxWidth: '100%',
         margin: '0 auto',
+        padding: '0 4px',
       }}>
         {/* Voice Button */}
         <div style={{
           textAlign: 'center',
-          marginBottom: '40px',
+          marginBottom: '20px',
+          width: '100%',
         }}>
           <button 
             onClick={handleButtonClick}
             style={{
-              width: '140px',
-              height: '140px',
+              width: '70px',
+              height: '70px',
               borderRadius: '50%',
-              border: '4px solid #fff',
+              border: '3px solid #fff',
               backgroundColor: twitterBlueDark,
               color: '#fff',
-              fontSize: '48px',
+              fontSize: '24px',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
@@ -348,8 +351,8 @@ function App() {
               margin: '0 auto',
               transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
               boxShadow: isListening ? 
-                `0 0 40px #fff8` : 
-                '0 4px 20px #0a75c2',
+                `0 0 20px #fff8` : 
+                '0 2px 12px #0a75c2',
               animation: isListening ? 'pulse 1.5s infinite' : 'none',
               transform: isListening ? 'scale(1.05)' : 'scale(1)'
             }}
@@ -360,8 +363,8 @@ function App() {
           {/* Status Text */}
           <p style={{ 
             color: '#fff', 
-            fontSize: '1.25rem',
-            margin: '24px 0 0 0',
+            fontSize: '0.8rem',
+            margin: '10px 0 0 0',
             fontWeight: '500',
             letterSpacing: '0.025em',
             textShadow: '0 2px 8px #0a75c2'
@@ -374,22 +377,23 @@ function App() {
         {transcript && (
           <div style={{
             backgroundColor: twitterBlueDark,
-            borderRadius: '16px',
-            padding: '24px',
-            marginBottom: '20px',
+            borderRadius: '10px',
+            padding: '12px',
+            marginBottom: '10px',
             width: '100%',
-            boxShadow: '0 2px 12px #0a75c2',
-            border: '2px solid #fff',
+            maxWidth: '350px',
+            boxShadow: '0 2px 8px #0a75c2',
+            border: '1px solid #fff',
             color: '#fff',
             textAlign: 'center',
           }}>
-            <div style={{ fontWeight: '600', color: '#fff', marginBottom: '12px', fontSize: '1rem' }}>
+            <div style={{ fontWeight: '600', color: '#fff', marginBottom: '6px', fontSize: '0.7rem' }}>
               You said:
             </div>
             <div style={{ 
               color: '#fff', 
-              fontSize: '1.25rem',
-              lineHeight: '1.6',
+              fontSize: '0.8rem',
+              lineHeight: '1.3',
               fontWeight: '400',
               wordBreak: 'break-word',
             }}>
@@ -402,23 +406,24 @@ function App() {
         {botReply && (
           <div style={{
             backgroundColor: twitterBlueDark,
-            borderRadius: '16px',
-            padding: '24px',
-            marginBottom: '20px',
+            borderRadius: '10px',
+            padding: '12px',
+            marginBottom: '10px',
             width: '100%',
-            boxShadow: '0 2px 12px #0a75c2',
-            border: '2px solid #fff',
+            maxWidth: '350px',
+            boxShadow: '0 2px 8px #0a75c2',
+            border: '1px solid #fff',
             color: '#fff',
             textAlign: 'center',
           }}>
-            <div style={{ fontWeight: '600', color: '#fff', marginBottom: '12px', fontSize: '1rem' }}>
+            <div style={{ fontWeight: '600', color: '#fff', marginBottom: '6px', fontSize: '0.7rem' }}>
               Assistant:
             </div>
             <div style={{ 
               color: '#fff', 
-              fontSize: '1.25rem',
-              lineHeight: '1.6',
-              marginBottom: '16px',
+              fontSize: '0.8rem',
+              lineHeight: '1.3',
+              marginBottom: '10px',
               fontWeight: '400',
               wordBreak: 'break-word',
             }}>
@@ -439,13 +444,13 @@ function App() {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '8px',
-                  marginTop: '12px'
+                  gap: '6px',
+                  marginTop: '6px'
                 }}>
                   <span 
                     onClick={toggleAudio}
                     style={{
-                      fontSize: '24px',
+                      fontSize: '16px',
                       color: '#fff',
                       cursor: 'pointer',
                       transition: 'transform 0.2s ease'
@@ -460,11 +465,11 @@ function App() {
                     {isAudioPlaying ? '⏸️' : '▶️'}
                   </span>
                   <span style={{
-                    fontSize: '14px',
+                    fontSize: '0.7rem',
                     color: '#fff',
                     opacity: 0.8
                   }}>
-                    {isAudioPlaying ? 'Audio playing... (Click to pause)' : 'Audio paused... (Click to play)'}
+                    {isAudioPlaying ? 'Playing...' : 'Click to play'}
                   </span>
                 </div>
               </>
@@ -476,50 +481,51 @@ function App() {
         {conversationHistory.length > 0 && (
           <div style={{
             width: '100%',
-            maxHeight: '400px',
+            maxWidth: '350px',
+            maxHeight: '250px',
             overflowY: 'auto',
             backgroundColor: twitterBlueDark,
-            borderRadius: '16px',
-            padding: '24px',
-            boxShadow: '0 2px 12px #0a75c2',
-            border: '2px solid #fff',
+            borderRadius: '10px',
+            padding: '12px',
+            boxShadow: '0 2px 8px #0a75c2',
+            border: '1px solid #fff',
             color: '#fff',
             textAlign: 'center',
           }}>
-            <div style={{ fontWeight: '600', color: '#fff', marginBottom: '20px', fontSize: '1.25rem' }}>
+            <div style={{ fontWeight: '600', color: '#fff', marginBottom: '10px', fontSize: '0.8rem' }}>
               Conversation History
             </div>
             {conversationHistory.map((entry, index) => (
-              <div key={index} style={{ marginBottom: '20px' }}>
+              <div key={index} style={{ marginBottom: '10px' }}>
                 <div style={{
                   backgroundColor: twitterBlue,
-                  borderRadius: '12px',
-                  padding: '16px',
-                  marginBottom: '12px',
+                  borderRadius: '8px',
+                  padding: '8px',
+                  marginBottom: '6px',
                   border: '1px solid #fff',
                   color: '#fff',
                   textAlign: 'center',
                 }}>
-                  <div style={{ fontWeight: '600', color: '#fff', marginBottom: '6px', fontSize: '1rem' }}>
+                  <div style={{ fontWeight: '600', color: '#fff', marginBottom: '3px', fontSize: '0.65rem' }}>
                     You
                   </div>
-                  <div style={{ color: '#fff', fontSize: '1.1rem', lineHeight: '1.5', wordBreak: 'break-word' }}>
+                  <div style={{ color: '#fff', fontSize: '0.7rem', lineHeight: '1.2', wordBreak: 'break-word' }}>
                     {entry.user}
                   </div>
                 </div>
                 
                 <div style={{
                   backgroundColor: twitterBlue,
-                  borderRadius: '12px',
-                  padding: '16px',
+                  borderRadius: '8px',
+                  padding: '8px',
                   border: '1px solid #fff',
                   color: '#fff',
                   textAlign: 'center',
                 }}>
-                  <div style={{ fontWeight: '600', color: '#fff', marginBottom: '6px', fontSize: '1rem' }}>
+                  <div style={{ fontWeight: '600', color: '#fff', marginBottom: '3px', fontSize: '0.65rem' }}>
                     Assistant
                   </div>
-                  <div style={{ color: '#fff', fontSize: '1.1rem', lineHeight: '1.5', wordBreak: 'break-word' }}>
+                  <div style={{ color: '#fff', fontSize: '0.7rem', lineHeight: '1.2', wordBreak: 'break-word' }}>
                     {entry.bot}
                   </div>
                 </div>
@@ -532,22 +538,22 @@ function App() {
       {/* Reset Button */}
       <div style={{
         position: 'fixed',
-        top: '20px',
-        right: '20px',
+        top: '8px',
+        right: '8px',
         zIndex: 10,
       }}>
         <button 
           onClick={resetConversation}
           style={{
-            padding: '10px 16px',
-            fontSize: '14px',
+            padding: '4px 8px',
+            fontSize: '0.7rem',
             backgroundColor: twitterBlueDark,
             color: '#fff',
-            border: '2px solid #fff',
-            borderRadius: '8px',
+            border: '1px solid #fff',
+            borderRadius: '6px',
             cursor: 'pointer',
             fontWeight: '500',
-            boxShadow: '0 2px 8px #0a75c2',
+            boxShadow: '0 2px 6px #0a75c2',
             transition: 'all 0.2s ease'
           }}
           onMouseEnter={(e) => {
