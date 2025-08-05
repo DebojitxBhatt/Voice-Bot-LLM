@@ -312,7 +312,7 @@ function App() {
           letterSpacing: '-0.025em',
           textShadow: '0 2px 8px #0a75c2'
         }}>
-          AI Voice Assistant
+          Voice Bot
         </h1>
       </div>
 
