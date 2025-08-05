@@ -74,7 +74,15 @@ function App() {
 
     // Check browser compatibility
     if (!window.SpeechRecognition && !window.webkitSpeechRecognition) {
+      console.error('Speech recognition not supported');
       alert('Speech recognition is not supported in this browser. Please use Chrome, Safari, or Edge.');
+      return;
+    }
+
+    // Check if running on HTTPS (required for speech recognition in production)
+    if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+      console.error('Speech recognition requires HTTPS in production');
+      alert('Speech recognition requires HTTPS. Please use HTTPS or localhost.');
       return;
     }
 
@@ -157,7 +165,15 @@ function App() {
 
         } catch (error) {
           console.error('Error:', error);
-          setBotReply('Sorry, there was an error processing your request.');
+          let errorMessage = 'Sorry, there was an error processing your request.';
+          
+          if (error.message.includes('Failed to fetch')) {
+            errorMessage = 'Cannot connect to server. Please check if the backend is running.';
+          } else if (error.message.includes('HTTP 500')) {
+            errorMessage = 'Server error. Please check your API key configuration.';
+          }
+          
+          setBotReply(errorMessage);
           setIsThinking(false);
           // Restart listening after error
           setTimeout(() => {
