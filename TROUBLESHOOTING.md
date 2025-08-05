@@ -24,9 +24,10 @@
 - If deploying, ensure you use HTTPS
 
 ### 5. **Server Status**
-- Backend should be running on: http://localhost:3000
-- Frontend should be running on: http://localhost:5173
-- Check both are running with: `npm start` in respective folders
+- **Production Backend**: https://voice-bot-llm-backend.onrender.com ✅
+- **Development Backend**: http://localhost:3000
+- **Development Frontend**: http://localhost:5173
+- Check backend health: https://voice-bot-llm-backend.onrender.com/health
 
 ### 6. **Common Error Messages**
 - "Cannot connect to server" → Backend not running
