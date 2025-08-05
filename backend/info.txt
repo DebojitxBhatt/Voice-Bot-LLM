@@ -1,0 +1,17 @@
+Name: Debojit Bhattacharya
+Current Role: Software Developer intern as NYC US based startup
+Target Role: GenAI Developer, Backend Developer
+
+Life Story: "I started as a self-taught programmer, I have academic background in Statistics & Mathematics which helps to solve complex problems. I've currently interning at US based startup as GenAI Backend Developer and love building user-focused products and engineering complex backend."
+
+Superpower: "My desions are Data driven, Analytical and I have mindset of "Until Death every defeat is psychological ."
+
+Growth Areas: ["Sofware developer", "Machine Learning", "Large language models"]
+
+Misconception: "People think I'm quiet, but I'm actually very collaborative once I understand the project."
+
+Boundary Pushing: "I volunteer for the hardest projects and always ask for feedback to improve."
+
+Technical Skills: ["JavaScript", "React", "Node.js", "Python", "GenAI Developement", "Machine Learning"]
+
+Personality: ["Analytical", "Team player", "Problem solver"]
