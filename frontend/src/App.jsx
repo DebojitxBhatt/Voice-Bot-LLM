@@ -1,244 +1,554 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 function App() {
   const [transcript, setTranscript] = useState('');
   const [botReply, setBotReply] = useState('');
   const [audioUrl, setAudioUrl] = useState('');
   const [isListening, setIsListening] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [debugInfo, setDebugInfo] = useState('');
+  const [isThinking, setIsThinking] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [conversationHistory, setConversationHistory] = useState([]);
+  const [audioLevel, setAudioLevel] = useState(0);
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+
+  const audioRef = useRef(null);
+  const recognitionRef = useRef(null);
+  const animationRef = useRef(null);
+
+  // Visual feedback animation for listening
+  useEffect(() => {
+    if (isListening) {
+      const animate = () => {
+        setAudioLevel(Math.random() * 100);
+        animationRef.current = requestAnimationFrame(animate);
+      };
+      animate();
+    } else {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+      setAudioLevel(0);
+    }
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+    };
+  }, [isListening]);
+
+  // Auto-restart listening after audio finishes
+  useEffect(() => {
+    if (audioRef.current) {
+      const handleEnded = () => {
+        setIsSpeaking(false);
+        setTimeout(() => {
+          startListening();
+        }, 1000);
+      };
+      audioRef.current.addEventListener('ended', handleEnded);
+      return () => {
+        if (audioRef.current) {
+          audioRef.current.removeEventListener('ended', handleEnded);
+        }
+      };
+    }
+  }, [audioUrl]);
+
+  // Auto-start listening when app loads
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      startListening();
+    }, 500);
+    return () => clearTimeout(timer);
+  }, []);
 
   const startListening = () => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+    }
     const recognition = new window.webkitSpeechRecognition() || new window.SpeechRecognition();
     recognition.lang = 'en-US';
     recognition.continuous = false;
-
+    recognition.interimResults = true;
+    recognitionRef.current = recognition;
     recognition.onstart = () => {
       setIsListening(true);
-      setDebugInfo('🎤 Started listening...');
+      setIsThinking(false);
+      setIsSpeaking(false);
     };
-    
     recognition.onend = () => {
       setIsListening(false);
-      setDebugInfo(prev => prev + '\n🎤 Stopped listening');
     };
-
     recognition.onresult = async (event) => {
-      const text = event.results[0][0].transcript;
-      setTranscript(text);
-      setDebugInfo(prev => prev + `\n📝 Transcribed: "${text}"`);
-      setIsLoading(true);
-
-      try {
-        setDebugInfo(prev => prev + '\n🔄 Sending to backend...');
-        
-        // Call the backend API
-        const res = await fetch('http://localhost:3000/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: text }),
-        });
-
-        if (!res.ok) {
-          throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+      let finalTranscript = '';
+      let interimTranscript = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalTranscript += transcript;
+        } else {
+          interimTranscript += transcript;
         }
-
-        // Get the JSON response
-        const data = await res.json();
-        setDebugInfo(prev => prev + `\n✅ Backend response received`);
-        
-        setBotReply(data.message);
-        
-        // Convert base64 audio data to blob URL
-        if (data.audioData) {
-          const audioBlob = new Blob([
-            Uint8Array.from(atob(data.audioData), c => c.charCodeAt(0))
-          ], { type: 'audio/mp3' });
-          
-          const audioUrl = URL.createObjectURL(audioBlob);
-          setAudioUrl(audioUrl);
-          setDebugInfo(prev => prev + '\n🎵 Audio generated and ready to play');
+      }
+      if (interimTranscript) {
+        setTranscript(interimTranscript);
+      }
+      if (finalTranscript) {
+        setTranscript(finalTranscript);
+        setIsThinking(true);
+        setIsListening(false);
+        try {
+          const res = await fetch('http://localhost:3000/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: finalTranscript }),
+          });
+          if (!res.ok) {
+            throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+          }
+          const data = await res.json();
+          setBotReply(data.message);
+          const newEntry = {
+            user: finalTranscript,
+            bot: data.message,
+            timestamp: new Date().toISOString()
+          };
+          setConversationHistory(prev => [...prev, newEntry]);
+          if (data.audioData) {
+            const audioBlob = new Blob([
+              Uint8Array.from(atob(data.audioData), c => c.charCodeAt(0))
+            ], { type: 'audio/mp3' });
+            const audioUrl = URL.createObjectURL(audioBlob);
+            setAudioUrl(audioUrl);
+            setIsSpeaking(true);
+            setIsThinking(false);
+          }
+        } catch (error) {
+          setBotReply('Sorry, there was an error processing your request.');
+          setIsThinking(false);
+          setTimeout(() => {
+            startListening();
+          }, 2000);
         }
-        
-      } catch (error) {
-        console.error('Error:', error);
-        setDebugInfo(prev => prev + `\n❌ Error: ${error.message}`);
-        setBotReply('Sorry, there was an error processing your request.');
-      } finally {
-        setIsLoading(false);
       }
     };
-
-    recognition.start();
+    recognition.onerror = (event) => {
+      setIsListening(false);
+      setIsThinking(false);
+      setTimeout(() => {
+        startListening();
+      }, 2000);
+    };
+    try {
+      recognition.start();
+    } catch (error) {
+      setTimeout(() => {
+        startListening();
+      }, 2000);
+    }
   };
 
-  const clearAll = () => {
+  const stopListening = () => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+    }
+    setIsListening(false);
+    setIsThinking(false);
+    setIsSpeaking(false);
+  };
+
+  const toggleAudio = () => {
+    if (audioRef.current) {
+      if (isAudioPlaying) {
+        audioRef.current.pause();
+      } else {
+        audioRef.current.play();
+      }
+    }
+  };
+
+  const stopAudio = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+    setIsSpeaking(false);
+    setIsAudioPlaying(false);
+  };
+
+  // Add audio event listeners to track playing state
+  useEffect(() => {
+    if (audioRef.current) {
+      const handlePlay = () => setIsAudioPlaying(true);
+      const handlePause = () => setIsAudioPlaying(false);
+      const handleEnded = () => setIsAudioPlaying(false);
+      
+      audioRef.current.addEventListener('play', handlePlay);
+      audioRef.current.addEventListener('pause', handlePause);
+      audioRef.current.addEventListener('ended', handleEnded);
+      
+      return () => {
+        if (audioRef.current) {
+          audioRef.current.removeEventListener('play', handlePlay);
+          audioRef.current.removeEventListener('pause', handlePause);
+          audioRef.current.removeEventListener('ended', handleEnded);
+        }
+      };
+    }
+  }, [audioUrl]);
+
+  const resetConversation = () => {
     setTranscript('');
     setBotReply('');
-    // Clean up the blob URL to prevent memory leaks
     if (audioUrl) {
       URL.revokeObjectURL(audioUrl);
     }
     setAudioUrl('');
-    setDebugInfo('');
+    setConversationHistory([]);
+    setIsListening(false);
+    setIsThinking(false);
+    setIsSpeaking(false);
+    stopListening();
+    setTimeout(() => {
+      startListening();
+    }, 500);
   };
+
+  const getStatusText = () => {
+    if (isListening) return 'Listening...';
+    if (isThinking) return 'Thinking...';
+    if (isSpeaking) return 'Speaking...';
+    return 'Ready - Click to start';
+  };
+
+  const getButtonIcon = () => {
+    if (isListening) return '🎤';
+    if (isThinking) return '⏳';
+    if (isSpeaking) return '🔊';
+    return '🎤';
+  };
+
+  const getButtonColor = () => {
+    if (isListening) return '#fff';
+    if (isThinking) return '#fff';
+    if (isSpeaking) return '#fff';
+    return '#fff';
+  };
+
+  const handleButtonClick = () => {
+    if (isListening) {
+      stopListening();
+    } else {
+      startListening();
+    }
+  };
+
+  // Twitter blue
+  const twitterBlue = '#343541';
+  const twitterBlueDark = '#40414f';
 
   return (
     <div style={{ 
-      padding: 30, 
-      maxWidth: 800, 
-      margin: '0 auto',
-      backgroundColor: '#f5f5f5',
+      backgroundColor: twitterBlue,
       minHeight: '100vh',
-      fontFamily: 'Arial, sans-serif'
+      fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'stretch',
+      justifyContent: 'stretch',
+      color: '#fff',
+      textAlign: 'center',
     }}>
-      <h1 style={{ color: '#333', textAlign: 'center', marginBottom: '10px' }}>🎙️ Voice Bot</h1>
-      <p style={{ color: '#666', textAlign: 'center', marginBottom: '30px' }}>
-        Click the button below and start talking to get an AI response!
-      </p>
-      
-      <div style={{ marginBottom: '20px', display: 'flex', gap: '10px', justifyContent: 'center' }}>
+      {/* Header */}
+      <div style={{
+        backgroundColor: 'transparent',
+        borderBottom: 'none',
+        padding: '32px 0 0 0',
+        textAlign: 'center',
+        boxShadow: 'none',
+        width: '100%',
+        margin: 0,
+      }}>
+        <h1 style={{ 
+          color: '#fff', 
+          margin: 0,
+          fontSize: '2.5rem',
+          fontWeight: '700',
+          letterSpacing: '-0.025em',
+          textShadow: '0 2px 8px #0a75c2'
+        }}>
+          AI Voice Assistant
+        </h1>
+      </div>
+
+      {/* Main Content */}
+      <div style={{ 
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        maxWidth: '600px',
+        width: '100%',
+        margin: '0 auto',
+      }}>
+        {/* Voice Button */}
+        <div style={{
+          textAlign: 'center',
+          marginBottom: '40px',
+        }}>
+          <button 
+            onClick={handleButtonClick}
+            style={{
+              width: '140px',
+              height: '140px',
+              borderRadius: '50%',
+              border: '4px solid #fff',
+              backgroundColor: twitterBlueDark,
+              color: '#fff',
+              fontSize: '48px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              boxShadow: isListening ? 
+                `0 0 40px #fff8` : 
+                '0 4px 20px #0a75c2',
+              animation: isListening ? 'pulse 1.5s infinite' : 'none',
+              transform: isListening ? 'scale(1.05)' : 'scale(1)'
+            }}
+          >
+            {getButtonIcon()}
+          </button>
+
+          {/* Status Text */}
+          <p style={{ 
+            color: '#fff', 
+            fontSize: '1.25rem',
+            margin: '24px 0 0 0',
+            fontWeight: '500',
+            letterSpacing: '0.025em',
+            textShadow: '0 2px 8px #0a75c2'
+          }}>
+            {getStatusText()}
+          </p>
+        </div>
+
+        {/* Live Transcription */}
+        {transcript && (
+          <div style={{
+            backgroundColor: twitterBlueDark,
+            borderRadius: '16px',
+            padding: '24px',
+            marginBottom: '20px',
+            width: '100%',
+            boxShadow: '0 2px 12px #0a75c2',
+            border: '2px solid #fff',
+            color: '#fff',
+            textAlign: 'center',
+          }}>
+            <div style={{ fontWeight: '600', color: '#fff', marginBottom: '12px', fontSize: '1rem' }}>
+              You said:
+            </div>
+            <div style={{ 
+              color: '#fff', 
+              fontSize: '1.25rem',
+              lineHeight: '1.6',
+              fontWeight: '400',
+              wordBreak: 'break-word',
+            }}>
+              "{transcript}"
+            </div>
+          </div>
+        )}
+
+        {/* AI Response */}
+        {botReply && (
+          <div style={{
+            backgroundColor: twitterBlueDark,
+            borderRadius: '16px',
+            padding: '24px',
+            marginBottom: '20px',
+            width: '100%',
+            boxShadow: '0 2px 12px #0a75c2',
+            border: '2px solid #fff',
+            color: '#fff',
+            textAlign: 'center',
+          }}>
+            <div style={{ fontWeight: '600', color: '#fff', marginBottom: '12px', fontSize: '1rem' }}>
+              Assistant:
+            </div>
+            <div style={{ 
+              color: '#fff', 
+              fontSize: '1.25rem',
+              lineHeight: '1.6',
+              marginBottom: '16px',
+              fontWeight: '400',
+              wordBreak: 'break-word',
+            }}>
+              "{botReply}"
+            </div>
+            
+            {audioUrl && (
+              <>
+                <audio 
+                  ref={audioRef}
+                  src={audioUrl} 
+                  autoPlay 
+                  style={{ 
+                    display: 'none' // Hide the audio element but keep it functional
+                  }}
+                />
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  marginTop: '12px'
+                }}>
+                  <span 
+                    onClick={toggleAudio}
+                    style={{
+                      fontSize: '24px',
+                      color: '#fff',
+                      cursor: 'pointer',
+                      transition: 'transform 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.transform = 'scale(1.1)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.transform = 'scale(1)';
+                    }}
+                  >
+                    {isAudioPlaying ? '⏸️' : '▶️'}
+                  </span>
+                  <span style={{
+                    fontSize: '14px',
+                    color: '#fff',
+                    opacity: 0.8
+                  }}>
+                    {isAudioPlaying ? 'Audio playing... (Click to pause)' : 'Audio paused... (Click to play)'}
+                  </span>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Conversation History */}
+        {conversationHistory.length > 0 && (
+          <div style={{
+            width: '100%',
+            maxHeight: '400px',
+            overflowY: 'auto',
+            backgroundColor: twitterBlueDark,
+            borderRadius: '16px',
+            padding: '24px',
+            boxShadow: '0 2px 12px #0a75c2',
+            border: '2px solid #fff',
+            color: '#fff',
+            textAlign: 'center',
+          }}>
+            <div style={{ fontWeight: '600', color: '#fff', marginBottom: '20px', fontSize: '1.25rem' }}>
+              Conversation History
+            </div>
+            {conversationHistory.map((entry, index) => (
+              <div key={index} style={{ marginBottom: '20px' }}>
+                <div style={{
+                  backgroundColor: twitterBlue,
+                  borderRadius: '12px',
+                  padding: '16px',
+                  marginBottom: '12px',
+                  border: '1px solid #fff',
+                  color: '#fff',
+                  textAlign: 'center',
+                }}>
+                  <div style={{ fontWeight: '600', color: '#fff', marginBottom: '6px', fontSize: '1rem' }}>
+                    You
+                  </div>
+                  <div style={{ color: '#fff', fontSize: '1.1rem', lineHeight: '1.5', wordBreak: 'break-word' }}>
+                    {entry.user}
+                  </div>
+                </div>
+                
+                <div style={{
+                  backgroundColor: twitterBlue,
+                  borderRadius: '12px',
+                  padding: '16px',
+                  border: '1px solid #fff',
+                  color: '#fff',
+                  textAlign: 'center',
+                }}>
+                  <div style={{ fontWeight: '600', color: '#fff', marginBottom: '6px', fontSize: '1rem' }}>
+                    Assistant
+                  </div>
+                  <div style={{ color: '#fff', fontSize: '1.1rem', lineHeight: '1.5', wordBreak: 'break-word' }}>
+                    {entry.bot}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Reset Button */}
+      <div style={{
+        position: 'fixed',
+        top: '20px',
+        right: '20px',
+        zIndex: 10,
+      }}>
         <button 
-          onClick={startListening} 
-          disabled={isListening || isLoading}
+          onClick={resetConversation}
           style={{
-            padding: '15px 30px',
-            fontSize: '18px',
-            backgroundColor: isListening ? '#ff6b6b' : '#4CAF50',
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            cursor: isListening || isLoading ? 'not-allowed' : 'pointer',
-            fontWeight: 'bold'
-          }}
-        >
-          {isListening ? '🎤 Listening...' : isLoading ? '⏳ Processing...' : '🎤 Start Talking'}
-        </button>
-        
-        <button 
-          onClick={clearAll}
-          style={{
-            padding: '15px 30px',
-            fontSize: '16px',
-            backgroundColor: '#666',
-            color: 'white',
-            border: 'none',
+            padding: '10px 16px',
+            fontSize: '14px',
+            backgroundColor: twitterBlueDark,
+            color: '#fff',
+            border: '2px solid #fff',
             borderRadius: '8px',
             cursor: 'pointer',
-            fontWeight: 'bold'
+            fontWeight: '500',
+            boxShadow: '0 2px 8px #0a75c2',
+            transition: 'all 0.2s ease'
+          }}
+          onMouseEnter={(e) => {
+            e.target.style.backgroundColor = '#fff';
+            e.target.style.color = twitterBlueDark;
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.backgroundColor = twitterBlueDark;
+            e.target.style.color = '#fff';
           }}
         >
-          🗑️ Clear All
+          🔄 Reset
         </button>
       </div>
 
-      {/* Your Speech */}
-      <div style={{ 
-        marginBottom: '20px', 
-        border: '2px solid #007bff', 
-        borderRadius: '10px', 
-        padding: '20px',
-        backgroundColor: 'white',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-      }}>
-        <h3 style={{ margin: '0 0 10px 0', color: '#007bff', fontWeight: 'bold' }}>🎤 Your Speech:</h3>
-        {transcript ? (
-          <p style={{ 
-            padding: '15px', 
-            backgroundColor: '#e3f2fd', 
-            borderRadius: '8px',
-            border: '2px solid #007bff',
-            fontSize: '16px',
-            margin: 0,
-            fontWeight: 'bold',
-            color: '#1565c0'
-          }}>
-            "{transcript}"
-          </p>
-        ) : (
-          <p style={{ color: '#999', fontStyle: 'italic' }}>No speech detected yet...</p>
-        )}
-      </div>
-
-      {/* Bot's Response */}
-      <div style={{ 
-        marginBottom: '20px', 
-        border: '2px solid #28a745', 
-        borderRadius: '10px', 
-        padding: '20px',
-        backgroundColor: 'white',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-      }}>
-        <h3 style={{ margin: '0 0 10px 0', color: '#28a745', fontWeight: 'bold' }}>🤖 Bot's Response:</h3>
-        {botReply ? (
-          <p style={{ 
-            padding: '15px', 
-            backgroundColor: '#e8f5e8', 
-            borderRadius: '8px',
-            border: '2px solid #28a745',
-            fontSize: '16px',
-            margin: 0,
-            lineHeight: '1.5',
-            color: '#155724',
-            fontWeight: '500'
-          }}>
-            "{botReply}"
-          </p>
-        ) : (
-          <p style={{ color: '#999', fontStyle: 'italic' }}>
-            {isLoading ? '⏳ Processing your request...' : 'No response yet...'}
-          </p>
-        )}
-      </div>
-
-      {/* Audio Player */}
-      {audioUrl && (
-        <div style={{ 
-          marginBottom: '20px', 
-          border: '2px solid #ffc107', 
-          borderRadius: '10px', 
-          padding: '20px',
-          backgroundColor: 'white',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-        }}>
-          <h3 style={{ margin: '0 0 10px 0', color: '#ff8f00', fontWeight: 'bold' }}>🔊 Audio Response:</h3>
-          <audio 
-            src={audioUrl} 
-            controls 
-            autoPlay 
-            style={{ width: '100%', marginTop: '10px' }}
-          />
-        </div>
-      )}
-
-      {/* Debug Information */}
-      <details style={{ marginTop: '30px' }}>
-        <summary style={{ 
-          cursor: 'pointer', 
-          color: '#666',
-          fontWeight: 'bold',
-          padding: '10px',
-          backgroundColor: 'white',
-          borderRadius: '5px',
-          border: '1px solid #ddd'
-        }}>
-          🔧 Debug Information
-        </summary>
-        <pre style={{ 
-          backgroundColor: 'white', 
-          padding: '15px', 
-          borderRadius: '5px', 
-          border: '1px solid #ddd',
-          fontSize: '12px',
-          whiteSpace: 'pre-wrap',
-          maxHeight: '200px',
-          overflow: 'auto',
-          color: '#333',
-          marginTop: '10px'
-        }}>
-          {debugInfo || 'No debug info yet...'}
-        </pre>
-      </details>
+      {/* CSS Animations */}
+      <style>
+        {`
+          @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+          }
+          @keyframes slideIn {
+            from {
+              opacity: 0;
+              transform: translateY(20px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+        `}
+      </style>
     </div>
   );
 }
