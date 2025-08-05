@@ -29,6 +29,7 @@ function App() {
       }
       setAudioLevel(0);
     }
+
     return () => {
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
@@ -45,6 +46,7 @@ function App() {
           startListening();
         }, 1000);
       };
+
       audioRef.current.addEventListener('ended', handleEnded);
       return () => {
         if (audioRef.current) {
@@ -56,32 +58,42 @@ function App() {
 
   // Auto-start listening when app loads
   useEffect(() => {
+    // Small delay to ensure everything is initialized
     const timer = setTimeout(() => {
       startListening();
     }, 500);
+    
     return () => clearTimeout(timer);
   }, []);
 
   const startListening = () => {
+    // Stop any existing recognition
     if (recognitionRef.current) {
       recognitionRef.current.stop();
     }
+
     const recognition = new window.webkitSpeechRecognition() || new window.SpeechRecognition();
     recognition.lang = 'en-US';
     recognition.continuous = false;
     recognition.interimResults = true;
+
     recognitionRef.current = recognition;
+
     recognition.onstart = () => {
+      console.log('Started listening...');
       setIsListening(true);
       setIsThinking(false);
       setIsSpeaking(false);
     };
+
     recognition.onend = () => {
+      console.log('Stopped listening...');
       setIsListening(false);
     };
     recognition.onresult = async (event) => {
       let finalTranscript = '';
       let interimTranscript = '';
+
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const transcript = event.results[i][0].transcript;
         if (event.results[i].isFinal) {
@@ -90,58 +102,80 @@ function App() {
           interimTranscript += transcript;
         }
       }
+
+      // Show interim results
       if (interimTranscript) {
         setTranscript(interimTranscript);
       }
+
+      // Process final result
       if (finalTranscript) {
+        console.log('Processing final transcript:', finalTranscript);
         setTranscript(finalTranscript);
         setIsThinking(true);
         setIsListening(false);
+
         try {
           const res = await fetch('http://localhost:3000/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ text: finalTranscript }),
           });
+
           if (!res.ok) {
             throw new Error(`HTTP ${res.status}: ${res.statusText}`);
           }
+
           const data = await res.json();
           setBotReply(data.message);
+
+          // Add to conversation history
           const newEntry = {
             user: finalTranscript,
             bot: data.message,
             timestamp: new Date().toISOString()
           };
           setConversationHistory(prev => [...prev, newEntry]);
+
+          // Convert base64 audio data to blob URL
           if (data.audioData) {
             const audioBlob = new Blob([
               Uint8Array.from(atob(data.audioData), c => c.charCodeAt(0))
             ], { type: 'audio/mp3' });
+            
             const audioUrl = URL.createObjectURL(audioBlob);
             setAudioUrl(audioUrl);
             setIsSpeaking(true);
             setIsThinking(false);
           }
+
         } catch (error) {
+          console.error('Error:', error);
           setBotReply('Sorry, there was an error processing your request.');
           setIsThinking(false);
+          // Restart listening after error
           setTimeout(() => {
             startListening();
           }, 2000);
         }
       }
     };
+
     recognition.onerror = (event) => {
+      console.error('Speech recognition error:', event.error);
       setIsListening(false);
       setIsThinking(false);
+      // Restart listening after error
       setTimeout(() => {
         startListening();
       }, 2000);
     };
+
     try {
       recognition.start();
     } catch (error) {
+      console.error('Failed to start recognition:', error);
+      // Retry after a delay
       setTimeout(() => {
         startListening();
       }, 2000);
@@ -229,10 +263,10 @@ function App() {
   };
 
   const getButtonColor = () => {
-    if (isListening) return '#fff';
-    if (isThinking) return '#fff';
-    if (isSpeaking) return '#fff';
-    return '#fff';
+    if (isListening) return '#ef4444';
+    if (isThinking) return '#f59e0b';
+    if (isSpeaking) return '#10a37f';
+    return '#6b7280'; // Gray when ready
   };
 
   const handleButtonClick = () => {
