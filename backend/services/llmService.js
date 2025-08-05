@@ -1,8 +1,14 @@
 const axios = require('axios');
 
-// OpenRouter API Configuration
-const OPENROUTER_API_KEY = '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';
-const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
+// OpenRouter API Configuration - Load from environment variables
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+const OPENROUTER_URL = process.env.OPENROUTER_URL || 'https://openrouter.ai/api/v1/chat/completions';
+
+// Validate API key
+if (!OPENROUTER_API_KEY) {
+  console.error('ERROR: OPENROUTER_API_KEY is not set in environment variables');
+  process.exit(1);
+}
 
 class LLMService {
   constructor() {
