@@ -1,4 +1,4 @@
-const axios = require('axios');
+import axios from 'axios';
 
 // OpenRouter API Configuration - Load from environment variables
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
@@ -90,4 +90,4 @@ class LLMService {
   }
 }
 
-module.exports = new LLMService();
+export default new LLMService();

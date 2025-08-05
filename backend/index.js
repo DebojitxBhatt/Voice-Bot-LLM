@@ -1,11 +1,16 @@
 // Load environment variables
-require('dotenv').config();
+import 'dotenv/config';
 
-const express = require('express');
-const bodyParser = require('body-parser');
-const path = require('path');
-const fs = require('fs');
-const cors = require('cors');
+import express from 'express';
+import bodyParser from 'body-parser';
+import path from 'path';
+import fs from 'fs';
+import cors from 'cors';
+import { fileURLToPath } from 'url';
+
+// Get __dirname equivalent for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -13,7 +18,7 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(bodyParser.json());
 
-const chatRoutes = require('./routes/chat');
+import chatRoutes from './routes/chat.js';
 app.use('/chat', chatRoutes);
 
 // Ensure responses folder exists
