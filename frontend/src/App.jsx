@@ -72,6 +72,12 @@ function App() {
       recognitionRef.current.stop();
     }
 
+    // Check browser compatibility
+    if (!window.SpeechRecognition && !window.webkitSpeechRecognition) {
+      alert('Speech recognition is not supported in this browser. Please use Chrome, Safari, or Edge.');
+      return;
+    }
+
     const recognition = new window.webkitSpeechRecognition() || new window.SpeechRecognition();
     recognition.lang = 'en-US';
     recognition.continuous = false;
@@ -116,7 +122,7 @@ function App() {
         setIsListening(false);
 
         try {
-          const res = await fetch('http://localhost:3000/chat', {
+          const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/chat`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ text: finalTranscript }),

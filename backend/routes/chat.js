@@ -15,11 +15,25 @@ const router = express.Router();
 router.post('/', async (req, res) => {
   const { text } = req.body;
 
-  if (!text) return res.status(400).json({ error: 'No text provided' });
+  // Input validation
+  if (!text || typeof text !== 'string') {
+    return res.status(400).json({ error: 'Valid text input is required' });
+  }
+
+  // Sanitize input (remove potential XSS)
+  const sanitizedText = text.trim().replace(/[<>]/g, '');
+  
+  if (sanitizedText.length === 0) {
+    return res.status(400).json({ error: 'Text cannot be empty' });
+  }
+
+  if (sanitizedText.length > 1000) {
+    return res.status(400).json({ error: 'Text too long (max 1000 characters)' });
+  }
 
   try {
     // Get response from LLM service
-    const reply = await llmService.getResponse(text);
+    const reply = await llmService.getResponse(sanitizedText);
 
     // Generate audio buffer directly (no file saving)
     const audioBuffer = await textToSpeechBuffer(reply);

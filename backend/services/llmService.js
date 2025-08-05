@@ -39,7 +39,7 @@ class LLMService {
           headers: {
             'Authorization': `Bearer ${this.apiKey}`,
             'Content-Type': 'application/json',
-            'HTTP-Referer': 'http://localhost:3000',
+            'HTTP-Referer': process.env.FRONTEND_URL || 'http://localhost:3000',
             'X-Title': 'VoiceBot'
           },
           timeout: 5000 // 5 second timeout
@@ -77,7 +77,7 @@ class LLMService {
           headers: {
             'Authorization': `Bearer ${this.apiKey}`,
             'Content-Type': 'application/json',
-            'HTTP-Referer': 'http://localhost:3000',
+            'HTTP-Referer': process.env.FRONTEND_URL || 'http://localhost:3000',
             'X-Title': 'VoiceBot'
           }
         }
