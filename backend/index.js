@@ -15,16 +15,12 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Configure CORS for production
-const corsOptions = {
-  origin: process.env.NODE_ENV === 'production' 
-    ? ['https://voice-bot-llm-frontend.onrender.com', process.env.FRONTEND_URL || 'https://yourdomain.com']
-    : ['http://localhost:5173', 'https://voice-bot-llm-frontend.onrender.com'],
+// Configure CORS - Allow all origins for now to fix the connection issue
+app.use(cors({
+  origin: true,
   credentials: true,
   optionsSuccessStatus: 200
-};
-
-app.use(cors(corsOptions));
+}));
 
 // Security headers
 app.use((req, res, next) => {
