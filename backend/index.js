@@ -16,10 +16,13 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Configure CORS - Use environment variable for frontend URL
+// Configure CORS - Allow both local and production
 const corsOptions = {
   origin: [
-    'http://localhost:5173', 
-    process.env.FRONTEND_URL],
+    'http://localhost:5173',
+    
+    'https://voice-bot-llm-frontend.onrender.com'
+  ],
   credentials: true,
   optionsSuccessStatus: 200
 };
