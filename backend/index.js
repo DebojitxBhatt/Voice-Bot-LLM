@@ -15,12 +15,16 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Configure CORS - Allow all origins for now to fix the connection issue
-app.use(cors({
-  origin: true,
+// Configure CORS - Use environment variable for frontend URL
+const corsOptions = {
+  origin: [
+    'http://localhost:5173', 
+    process.env.FRONTEND_URL],
   credentials: true,
   optionsSuccessStatus: 200
-}));
+};
+
+app.use(cors(corsOptions));
 
 // Security headers
 app.use((req, res, next) => {
